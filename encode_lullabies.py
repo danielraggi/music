@@ -59,6 +59,8 @@ def notes_to_track(notes, track, channel=0, pedal=True):
 
     When pedal=True, sustain pedal is held through notes and briefly lifted
     at rests for a legato, resonant sound.
+    Returns any remaining pending_time (from trailing rests) so the caller
+    can apply it to end_of_track.
     """
     pending_time = 0
     pedal_on = False
@@ -94,6 +96,7 @@ def notes_to_track(notes, track, channel=0, pedal=True):
         track.append(Message('control_change', control=64, value=0,
                              time=pending_time, channel=channel))
         pending_time = 0
+    return pending_time
 
 def save_piece(filename, title, tempo_bpm, time_num, time_den, key, rh, lh):
     mid = MidiFile(ticks_per_beat=TPB)
@@ -112,8 +115,8 @@ def save_piece(filename, title, tempo_bpm, time_num, time_den, key, rh, lh):
     # Reverb (CC91) for warmth, expression (CC11) for dynamics
     rh_track.append(Message('control_change', control=91, value=60, time=0, channel=0))
     rh_track.append(Message('control_change', control=11, value=100, time=0, channel=0))
-    notes_to_track(rh, rh_track, channel=0)
-    rh_track.append(MetaMessage('end_of_track', time=0))
+    rh_rest = notes_to_track(rh, rh_track, channel=0)
+    rh_track.append(MetaMessage('end_of_track', time=rh_rest))
 
     lh_track = MidiTrack()
     mid.tracks.append(lh_track)
@@ -121,8 +124,8 @@ def save_piece(filename, title, tempo_bpm, time_num, time_den, key, rh, lh):
     lh_track.append(Message('program_change', program=0, time=0, channel=1))
     lh_track.append(Message('control_change', control=91, value=60, time=0, channel=1))
     lh_track.append(Message('control_change', control=11, value=90, time=0, channel=1))
-    notes_to_track(lh, lh_track, channel=1)
-    lh_track.append(MetaMessage('end_of_track', time=0))
+    lh_rest = notes_to_track(lh, lh_track, channel=1)
+    lh_track.append(MetaMessage('end_of_track', time=lh_rest))
 
     mid.save(filename)
     print(f"  Saved: {filename}")
@@ -478,17 +481,17 @@ def encode_chopin_berceuse():
     rh += [n('A4',Q,MP), n('G4',E,P), n('E4',DQ,P)]
     lh += bass_bar()
 
-    # Bars 9-12: More ornamentation — 16th notes
-    rh += [n('C5',E,MF), n('B4',S,MP), n('C5',S,MP), n('D5',E,MF), n('C5',S,MP), n('B4',S,MP)]
+    # Bars 9-12: More ornamentation — flowing eighths in 6/8
+    rh += [n('C5',E,MF), n('B4',E,MP), n('C5',E,MP), n('D5',E,MF), n('C5',E,MP), n('B4',E,MP)]
     lh += bass_bar()
 
-    rh += [n('A4',E,MP), n('G4',S,P), n('A4',S,P), n('G4',E,P), n('F4',S,P), n('E4',S,P)]
+    rh += [n('A4',E,MP), n('G4',E,P), n('A4',E,P), n('G4',E,P), n('F4',E,P), n('E4',E,P)]
     lh += bass_bar()
 
-    rh += [n('E4',E,MP), n('G4',S,MP), n('C5',S,MF), n('E5',E,MF), n('D5',S,MF), n('C5',S,MP)]
+    rh += [n('E4',E,MP), n('G4',E,MP), n('C5',E,MF), n('E5',E,MF), n('D5',E,MF), n('C5',E,MP)]
     lh += bass_bar()
 
-    rh += [n('B4',E,MP), n('A4',S,P), n('G4',S,P), n('E4',DQ,P)]
+    rh += [n('B4',E,MP), n('A4',E,P), n('G4',E,P), n('E4',DQ,P)]
     lh += bass_bar()
 
     # Bars 13-16: Peak ornamentation then winding down
@@ -496,8 +499,8 @@ def encode_chopin_berceuse():
            n('E5',S,MF), n('G5',S,F), n('E5',S,MF), n('D5',S,MP), n('C5',S,MP), n('B4',S,MP)]
     lh += bass_bar()
 
-    rh += [n('C5',E,MF), n('A4',S,MP), n('G4',S,P),
-           n('E4',E,P), n('D4',S,P), n('C4',S,PP)]
+    rh += [n('C5',E,MF), n('A4',E,MP), n('G4',E,P),
+           n('E4',E,P), n('D4',E,P), n('C4',E,PP)]
     lh += bass_bar()
 
     # Gentle ending
