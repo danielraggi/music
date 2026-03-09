@@ -42,8 +42,8 @@ def p(name):
 
 R = None  # rest
 
-# ─── Velocity levels ───
-FF = 100; F = 88; MF = 76; MP = 66; P = 54; PP = 44
+# ─── Velocity levels (soft for lullaby character) ───
+FF = 85; F = 72; MF = 62; MP = 52; P = 42; PP = 32
 
 # ─── Note constructors ───
 def n(pitch, dur, vel=MF):
@@ -54,17 +54,46 @@ def n(pitch, dur, vel=MF):
 def rest(dur):
     return (R, dur, 0)
 
-def notes_to_track(notes, track, channel=0):
+def notes_to_track(notes, track, channel=0, pedal=True):
+    """Convert note list to MIDI messages with optional sustain pedal.
+
+    When pedal=True, sustain pedal is held through notes and briefly lifted
+    at rests for a legato, resonant sound.
+    """
     pending_time = 0
+    pedal_on = False
     for pitch, dur, vel in notes:
         if pitch is None:
+            # Lift pedal during rests for clarity
+            if pedal and pedal_on:
+                track.append(Message('control_change', control=64, value=0,
+                                     time=pending_time, channel=channel))
+                pending_time = 0
+                pedal_on = False
             pending_time += dur
         else:
+            # Re-pedal: brief lift then press for legato connections
+            if pedal and pedal_on:
+                track.append(Message('control_change', control=64, value=0,
+                                     time=pending_time, channel=channel))
+                track.append(Message('control_change', control=64, value=80,
+                                     time=0, channel=channel))
+                pending_time = 0
+            elif pedal and not pedal_on:
+                track.append(Message('control_change', control=64, value=80,
+                                     time=pending_time, channel=channel))
+                pending_time = 0
+                pedal_on = True
             track.append(Message('note_on', note=pitch, velocity=vel,
                                  time=pending_time, channel=channel))
             track.append(Message('note_off', note=pitch, velocity=0,
                                  time=dur, channel=channel))
             pending_time = 0
+    # Lift pedal at end
+    if pedal and pedal_on:
+        track.append(Message('control_change', control=64, value=0,
+                             time=pending_time, channel=channel))
+        pending_time = 0
 
 def save_piece(filename, title, tempo_bpm, time_num, time_den, key, rh, lh):
     mid = MidiFile(ticks_per_beat=TPB)
@@ -79,14 +108,19 @@ def save_piece(filename, title, tempo_bpm, time_num, time_den, key, rh, lh):
     rh_track = MidiTrack()
     mid.tracks.append(rh_track)
     rh_track.append(MetaMessage('track_name', name='Melody', time=0))
-    rh_track.append(Message('program_change', program=0, time=0))
+    rh_track.append(Message('program_change', program=0, time=0, channel=0))
+    # Reverb (CC91) for warmth, expression (CC11) for dynamics
+    rh_track.append(Message('control_change', control=91, value=60, time=0, channel=0))
+    rh_track.append(Message('control_change', control=11, value=100, time=0, channel=0))
     notes_to_track(rh, rh_track, channel=0)
     rh_track.append(MetaMessage('end_of_track', time=0))
 
     lh_track = MidiTrack()
     mid.tracks.append(lh_track)
     lh_track.append(MetaMessage('track_name', name='Accompaniment', time=0))
-    lh_track.append(Message('program_change', program=0, time=0))
+    lh_track.append(Message('program_change', program=0, time=0, channel=1))
+    lh_track.append(Message('control_change', control=91, value=60, time=0, channel=1))
+    lh_track.append(Message('control_change', control=11, value=90, time=0, channel=1))
     notes_to_track(lh, lh_track, channel=1)
     lh_track.append(MetaMessage('end_of_track', time=0))
 
