@@ -166,6 +166,49 @@ bitmidi() {
     scrape_and_download "https://bitmidi.com/$piece_slug" "\.mid" "$dest" "$desc" "https://bitmidi.com"
 }
 
+# Try multiple sources for a piece — stop at first success
+try_sources() {
+    dest="$1"; desc="$2"
+    shift 2
+
+    if [ -f "$dest" ]; then
+        echo "  [SKIP] Already exists: $(basename "$dest")"
+        SUCCESS=$((SUCCESS + 1))
+        return 0
+    fi
+
+    while [ $# -ge 2 ]; do
+        page_url="$1"; pattern="$2"; base_url="$3"
+        shift 3
+
+        echo "  [TRY]  $desc"
+        page=$(fetch_page "$page_url") || {
+            echo "         Page failed: $page_url"
+            continue
+        }
+
+        mid_url=$(echo "$page" | extract_mid_links | grep -i "$pattern" | head -1)
+        if [ -z "$mid_url" ]; then
+            echo "         No match on $page_url"
+            continue
+        fi
+
+        case "$mid_url" in
+            http*) full_url="$mid_url" ;;
+            /*)    full_url="$base_url$mid_url" ;;
+            *)     full_url="$base_url/$mid_url" ;;
+        esac
+
+        if download_direct "$full_url" "$dest" "$desc"; then
+            return 0
+        fi
+    done
+
+    echo "         All sources failed"
+    echo "$desc -> manual download needed" >> "$MANUAL_FILE"
+    FAIL=$((FAIL + 1))
+}
+
 echo "=============================================="
 echo "  Classical Lullabies MIDI Collection"
 echo "=============================================="
@@ -204,32 +247,25 @@ echo ""
 # ─────────────────────────────────────────
 echo "=== BACH ==="
 
-# piano-midi.de: Bach files use "bach_" prefix
 piano_midi_de "bach.htm" "846" \
     "$BASE_DIR/bach/bach_prelude_c_bwv846.mid" \
     "Bach - Prelude in C Major BWV 846"
 
-# "air" might not be on piano-midi.de — try mfiles first
-mfiles "bach-air.htm" "\.mid" \
-    "$BASE_DIR/bach/bach_air_on_g_string_bwv1068.mid" \
-    "Bach - Air on the G String BWV 1068"
+# Try classicalmidi.co.uk for Bach orchestral/vocal pieces
+try_sources "$BASE_DIR/bach/bach_air_on_g_string_bwv1068.mid" "Bach - Air on the G String BWV 1068" \
+    "https://www.mfiles.co.uk/scores/air-on-the-g-string.htm" "\.mid" "https://www.mfiles.co.uk" \
+    "https://www.classicalmidi.co.uk/bach.htm" "air" "https://www.classicalmidi.co.uk"
 
-mfiles "bist-du-bei-mir.htm" "\.mid" \
-    "$BASE_DIR/bach/bach_bist_du_bei_mir_bwv508.mid" \
-    "Bach - Bist du bei mir BWV 508"
+try_sources "$BASE_DIR/bach/bach_jesu_joy_bwv147.mid" "Bach - Jesu Joy of Man's Desiring BWV 147" \
+    "https://www.mfiles.co.uk/scores/jesu-joy-of-mans-desiring-piano.htm" "\.mid" "https://www.mfiles.co.uk" \
+    "https://www.classicalmidi.co.uk/bach.htm" "147\|jesu" "https://www.classicalmidi.co.uk"
 
-mfiles "jesu-joy-of-mans-desiring.htm" "\.mid" \
-    "$BASE_DIR/bach/bach_jesu_joy_bwv147.mid" \
-    "Bach - Jesu Joy of Man's Desiring BWV 147"
+try_sources "$BASE_DIR/bach/bach_sheep_may_safely_graze_bwv208.mid" "Bach - Sheep May Safely Graze BWV 208" \
+    "https://www.mfiles.co.uk/scores/sheep-may-safely-graze-piano.htm" "\.mid" "https://www.mfiles.co.uk" \
+    "https://www.classicalmidi.co.uk/bach.htm" "208\|sheep" "https://www.classicalmidi.co.uk"
 
-mfiles "sheep-may-safely-graze.htm" "\.mid" \
-    "$BASE_DIR/bach/bach_sheep_may_safely_graze_bwv208.mid" \
-    "Bach - Sheep May Safely Graze BWV 208"
-
-# Try bitmidi for cello suite
-bitmidi "bach-cello-suite-no-1-prelude-mid" \
-    "$BASE_DIR/bach/bach_cello_suite1_prelude_bwv1007.mid" \
-    "Bach - Cello Suite No.1 Prelude BWV 1007"
+try_sources "$BASE_DIR/bach/bach_bist_du_bei_mir_bwv508.mid" "Bach - Bist du bei mir BWV 508" \
+    "https://www.classicalmidi.co.uk/bach.htm" "508\|bist" "https://www.classicalmidi.co.uk"
 
 echo ""
 
@@ -238,10 +274,10 @@ echo ""
 # ─────────────────────────────────────────
 echo "=== MOZART ==="
 
-# piano-midi.de Mozart files use "mz_" prefix
-piano_midi_de "mozart.htm" "265" \
-    "$BASE_DIR/mozart/mozart_twinkle_variations_k265.mid" \
-    "Mozart - Ah vous dirai-je Maman (Twinkle) K.265"
+# piano-midi.de Mozart uses "mz_" prefix — 265 not available, try classicalmidi
+try_sources "$BASE_DIR/mozart/mozart_twinkle_variations_k265.mid" "Mozart - Ah vous dirai-je Maman K.265" \
+    "http://piano-midi.de/mozart.htm" "265\|vous" "http://piano-midi.de" \
+    "https://www.classicalmidi.co.uk/mozart.htm" "265\|twinkle\|vous" "https://www.classicalmidi.co.uk"
 
 piano_midi_de "mozart.htm" "545_2" \
     "$BASE_DIR/mozart/mozart_sonata_k545_andante.mid" \
@@ -255,17 +291,16 @@ piano_midi_de "mozart.htm" "545_1" \
     "$BASE_DIR/mozart/mozart_sonata_k545_allegro.mid" \
     "Mozart - Piano Sonata K.545 1st mvt (Allegro)"
 
-mfiles "mozart-lullaby-wiegenlied.htm" "\.mid" \
-    "$BASE_DIR/mozart/mozart_wiegenlied_k350.mid" \
-    "Mozart - Wiegenlied (Lullaby) K.350"
+try_sources "$BASE_DIR/mozart/mozart_wiegenlied_k350.mid" "Mozart - Wiegenlied (Lullaby) K.350" \
+    "https://www.classicalmidi.co.uk/mozart.htm" "350\|wiegenlied\|lullaby" "https://www.classicalmidi.co.uk"
 
-mfiles "eine-kleine-nachtmusik-romanze.htm" "\.mid" \
-    "$BASE_DIR/mozart/mozart_eine_kleine_romanze_k525.mid" \
-    "Mozart - Eine kleine Nachtmusik, Romanze K.525"
+try_sources "$BASE_DIR/mozart/mozart_eine_kleine_romanze_k525.mid" "Mozart - Eine kleine Nachtmusik, Romanze K.525" \
+    "https://www.mfiles.co.uk/scores/eine-kleine-nachtmusik-2nd-movement.htm" "\.mid" "https://www.mfiles.co.uk" \
+    "https://www.classicalmidi.co.uk/mozart.htm" "525\|kleine" "https://www.classicalmidi.co.uk"
 
-mfiles "ave-verum-corpus.htm" "\.mid" \
-    "$BASE_DIR/mozart/mozart_ave_verum_corpus_k618.mid" \
-    "Mozart - Ave Verum Corpus K.618"
+try_sources "$BASE_DIR/mozart/mozart_ave_verum_corpus_k618.mid" "Mozart - Ave Verum Corpus K.618" \
+    "https://www.mfiles.co.uk/scores/mozart-ave-verum-corpus.htm" "\.mid" "https://www.mfiles.co.uk" \
+    "https://www.classicalmidi.co.uk/mozart.htm" "618\|verum" "https://www.classicalmidi.co.uk"
 
 echo ""
 
@@ -274,9 +309,9 @@ echo ""
 # ─────────────────────────────────────────
 echo "=== VIVALDI ==="
 
-mfiles "vivaldi-winter-largo.htm" "\.mid" \
-    "$BASE_DIR/vivaldi/vivaldi_winter_largo_rv297.mid" \
-    "Vivaldi - Winter Largo (Four Seasons) RV 297"
+try_sources "$BASE_DIR/vivaldi/vivaldi_winter_largo_rv297.mid" "Vivaldi - Winter Largo (Four Seasons) RV 297" \
+    "https://www.mfiles.co.uk/scores/four-seasons-winter-largo.htm" "\.mid" "https://www.mfiles.co.uk" \
+    "https://www.classicalmidi.co.uk/vivaldi.htm" "winter\|297" "https://www.classicalmidi.co.uk"
 
 echo ""
 
@@ -296,9 +331,9 @@ echo ""
 # ─────────────────────────────────────────
 echo "=== HAYDN ==="
 
-mfiles "haydn-serenade.htm" "\.mid" \
-    "$BASE_DIR/haydn/haydn_serenade_op3no5.mid" \
-    "Haydn - Serenade (String Quartet Op.3 No.5)"
+try_sources "$BASE_DIR/haydn/haydn_serenade_op3no5.mid" "Haydn - Serenade (String Quartet Op.3 No.5)" \
+    "https://www.mfiles.co.uk/scores/haydn-serenade-string-quartet.htm" "\.mid" "https://www.mfiles.co.uk" \
+    "https://www.classicalmidi.co.uk/haydn.htm" "serenade\|op3" "https://www.classicalmidi.co.uk"
 
 echo ""
 
@@ -307,7 +342,6 @@ echo ""
 # ─────────────────────────────────────────
 echo "=== BEETHOVEN ==="
 
-# FIXED: "moonlight" or "mond" — avoid matching "pathetique"
 piano_midi_de "beeth.htm" "mond\|moonl\|son.*14.*1" \
     "$BASE_DIR/beethoven/beethoven_moonlight_sonata_mvt1.mid" \
     "Beethoven - Moonlight Sonata 1st mvt"
@@ -320,7 +354,6 @@ piano_midi_de "beeth.htm" "pathet.*2" \
     "$BASE_DIR/beethoven/beethoven_pathetique_adagio.mid" \
     "Beethoven - Pathetique Sonata, Adagio cantabile"
 
-# mfiles fallback for moonlight
 mfiles "moonlight-movement1.htm" "\.mid" \
     "$BASE_DIR/beethoven/beethoven_moonlight_mfiles.mid" \
     "Beethoven - Moonlight Sonata (mfiles)"
@@ -351,18 +384,17 @@ echo ""
 # ─────────────────────────────────────────
 echo "=== SCHUBERT ==="
 
-mfiles "schubert-wiegenlied.htm" "\.mid" \
-    "$BASE_DIR/schubert/schubert_wiegenlied_d498.mid" \
-    "Schubert - Wiegenlied D.498"
+try_sources "$BASE_DIR/schubert/schubert_wiegenlied_d498.mid" "Schubert - Wiegenlied D.498" \
+    "https://www.mfiles.co.uk/scores/schubert-lullaby.htm" "\.mid" "https://www.mfiles.co.uk" \
+    "https://www.classicalmidi.co.uk/schubert.htm" "498\|wiegenlied\|lullaby" "https://www.classicalmidi.co.uk"
 
-mfiles "ave-maria-schubert.htm" "\.mid" \
-    "$BASE_DIR/schubert/schubert_ave_maria_d839.mid" \
-    "Schubert - Ave Maria D.839"
+try_sources "$BASE_DIR/schubert/schubert_ave_maria_d839.mid" "Schubert - Ave Maria D.839" \
+    "https://www.mfiles.co.uk/scores/schubert-ave-maria.htm" "\.mid" "https://www.mfiles.co.uk" \
+    "https://www.classicalmidi.co.uk/schubert.htm" "839\|ave.*maria" "https://www.classicalmidi.co.uk"
 
-# piano-midi.de Schubert - try broad patterns
-piano_midi_de "schubert.htm" "d957.*4\|stand\|seren" \
-    "$BASE_DIR/schubert/schubert_standchen_serenade_d957.mid" \
-    "Schubert - Standchen (Serenade) D.957"
+try_sources "$BASE_DIR/schubert/schubert_standchen_serenade_d957.mid" "Schubert - Standchen (Serenade) D.957" \
+    "http://piano-midi.de/schubert.htm" "d957.*4\|stand\|seren" "http://piano-midi.de" \
+    "https://www.classicalmidi.co.uk/schubert.htm" "957\|stand\|seren" "https://www.classicalmidi.co.uk"
 
 echo ""
 
@@ -371,10 +403,9 @@ echo ""
 # ─────────────────────────────────────────
 echo "=== SCHUMANN ==="
 
-# Try broader patterns for Schumann — file might be "kinderszenen" or "traum"
-piano_midi_de "schumann.htm" "traum\|kinderszenen" \
-    "$BASE_DIR/schumann/schumann_traumerei_kinderszenen.mid" \
-    "Schumann - Traumerei (Kinderszenen No.7)"
+try_sources "$BASE_DIR/schumann/schumann_traumerei_kinderszenen.mid" "Schumann - Traumerei (Kinderszenen No.7)" \
+    "http://piano-midi.de/schumann.htm" "traum\|kinderszenen" "http://piano-midi.de" \
+    "https://www.classicalmidi.co.uk/schumann.htm" "traum\|kinderszenen" "https://www.classicalmidi.co.uk"
 
 mfiles "reverie-traumerei.htm" "\.mid" \
     "$BASE_DIR/schumann/schumann_traumerei_mfiles.mid" \
@@ -387,22 +418,22 @@ echo ""
 # ─────────────────────────────────────────
 echo "=== CHOPIN ==="
 
-# piano-midi.de Chopin files use "chpn_" prefix
-piano_midi_de "chopin.htm" "57" \
-    "$BASE_DIR/chopin/chopin_berceuse_op57.mid" \
-    "Chopin - Berceuse Op.57"
+# Berceuse Op.57 and Nocturne Op.9 No.2 are NOT on piano-midi.de
+try_sources "$BASE_DIR/chopin/chopin_berceuse_op57.mid" "Chopin - Berceuse Op.57" \
+    "https://www.classicalmidi.co.uk/chopin.htm" "57\|berceuse" "https://www.classicalmidi.co.uk"
 
-piano_midi_de "chopin.htm" "op9_2\|op9-2\|noc.*9.*2" \
-    "$BASE_DIR/chopin/chopin_nocturne_op9no2.mid" \
-    "Chopin - Nocturne Op.9 No.2"
-
-piano_midi_de "chopin.htm" "op27_2\|op27-2" \
+# Op.27 No.2 IS on piano-midi.de as chpn_op27_2.mid
+piano_midi_de "chopin.htm" "op27_2" \
     "$BASE_DIR/chopin/chopin_nocturne_op27no2.mid" \
     "Chopin - Nocturne Op.27 No.2"
 
+# Op.9 No.2 — mfiles works, also try classicalmidi
 mfiles "chopin-nocturne-op9-no2.htm" "\.mid" \
-    "$BASE_DIR/chopin/chopin_nocturne_op9no2_mfiles.mid" \
-    "Chopin - Nocturne Op.9 No.2 (mfiles)"
+    "$BASE_DIR/chopin/chopin_nocturne_op9no2.mid" \
+    "Chopin - Nocturne Op.9 No.2"
+
+try_sources "$BASE_DIR/chopin/chopin_nocturne_op9no2_alt.mid" "Chopin - Nocturne Op.9 No.2 (alt)" \
+    "https://www.classicalmidi.co.uk/chopin.htm" "op9.*2\|noc.*9" "https://www.classicalmidi.co.uk"
 
 echo ""
 
