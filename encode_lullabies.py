@@ -213,15 +213,39 @@ def encode_mozart_twinkle():
 
     # Variation 1: Same melody but with running 16th notes
     # RH plays continuous 16ths around the melody notes
+    # C major scale for diatonic neighbor notes
+    c_major = [60,62,64,65,67,69,71,72,74,76,77,79,81,83,84]
+
+    def scale_above(pitch):
+        """Next note up in C major."""
+        for s in c_major:
+            if s > pitch:
+                return s
+        return pitch + 2
+
+    def scale_below(pitch):
+        """Next note down in C major."""
+        for s in reversed(c_major):
+            if s < pitch:
+                return s
+        return pitch - 2
+
+    def scale_above2(pitch):
+        """Two steps up in C major."""
+        return scale_above(scale_above(pitch))
+
     def var1_measure(mel1, mel2, bass_root, bass_fifth):
         """Variation 1 style: 16th note figuration around melody."""
         rh_notes = []
         lh_notes = []
         for mel in [mel1, mel2]:
             mp = p(mel)
-            # 16th note turn around the melody note
-            rh_notes += [n(mp, S, MP), n(mp+2, S, P), n(mp, S, P), n(mp-1, S, P),
-                         n(mp, S, MP), n(mp+2, S, P), n(mp+4, S, P), n(mp+2, S, P)]
+            up1 = scale_above(mp)
+            dn1 = scale_below(mp)
+            up2 = scale_above2(mp)
+            # Diatonic turn: note-up-note-down, note-up-up2-up
+            rh_notes += [n(mp, S, MP), n(up1, S, P), n(mp, S, P), n(dn1, S, P),
+                         n(mp, S, MP), n(up1, S, P), n(up2, S, P), n(up1, S, P)]
         lh_notes += [n(bass_root, Q, PP), n(bass_fifth, Q, PP),
                      n(bass_root, Q, PP), n(bass_fifth, Q, PP)]
         return rh_notes, lh_notes
@@ -243,7 +267,7 @@ def encode_mozart_twinkle():
     r, l = var1_measure('A4','G4','F3','C4'); rh += r; lh += l
     r, l = var1_measure('F4','E4','C3','G3'); rh += r; lh += l
     # Final bar - end cleanly
-    rh += [n('D4',S,MP), n('E4',S,P), n('D4',S,P), n('C#4',S,P),
+    rh += [n('D4',S,MP), n('E4',S,P), n('D4',S,P), n('C4',S,P),
            n('D4',S,MP), n('E4',S,P), n('F4',S,P), n('E4',S,P),
            n('C4',H,MP)]
     lh += [n('G2',Q,PP), n('G2',Q,PP), n('C3',H,PP)]
