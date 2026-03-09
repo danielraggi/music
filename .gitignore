@@ -1,0 +1,6 @@
+# Rendered audio (too large for git)
+lullabies_wav/
+lullabies_mp3/
+
+# Soundfonts (large binary files)
+soundfonts/
