@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 #
 # Classical Lullabies MIDI Collection — Download Script
 #
@@ -15,14 +15,17 @@
 set -e
 
 BASE_DIR="$(cd "$(dirname "$0")" && pwd)/lullabies"
-mkdir -p "$BASE_DIR"/{bach,mozart,vivaldi,handel,haydn,beethoven,brahms,schubert,schumann,chopin}
+for d in bach mozart vivaldi handel haydn beethoven brahms schubert schumann chopin; do
+    mkdir -p "$BASE_DIR/$d"
+done
 
-MANUAL_DOWNLOADS=()
+MANUAL_FILE=$(mktemp)
+trap 'rm -f "$MANUAL_FILE"' EXIT
 
 download_midi() {
-    local url="$1"
-    local dest="$2"
-    local desc="$3"
+    url="$1"
+    dest="$2"
+    desc="$3"
 
     if [ -f "$dest" ]; then
         echo "  [SKIP] Already exists: $(basename "$dest")"
@@ -33,18 +36,18 @@ download_midi() {
     if curl -sL --fail --connect-timeout 10 -o "$dest" "$url" 2>/dev/null; then
         # Verify it's actually a MIDI file (starts with MThd)
         if head -c 4 "$dest" 2>/dev/null | grep -q "MThd"; then
-            local size=$(wc -c < "$dest")
+            size=$(wc -c < "$dest")
             echo "         OK ($(( size / 1024 ))KB)"
             return 0
         else
             echo "         Not a valid MIDI file, removing"
             rm -f "$dest"
-            MANUAL_DOWNLOADS+=("$desc -> $url")
+            echo "$desc -> $url" >> "$MANUAL_FILE"
             return 1
         fi
     else
         echo "         Download failed"
-        MANUAL_DOWNLOADS+=("$desc -> $url")
+        echo "$desc -> $url" >> "$MANUAL_FILE"
         return 1
     fi
 }
@@ -262,12 +265,12 @@ total=$(find "$BASE_DIR" -name "*.mid" -type f | wc -l)
 echo "  Successfully downloaded: $total MIDI files"
 echo ""
 
-if [ ${#MANUAL_DOWNLOADS[@]} -gt 0 ]; then
+if [ -s "$MANUAL_FILE" ]; then
     echo "  The following need manual download:"
     echo ""
-    for item in "${MANUAL_DOWNLOADS[@]}"; do
+    while IFS= read -r item; do
         echo "    - $item"
-    done
+    done < "$MANUAL_FILE"
     echo ""
     echo "  Manual download sources:"
     echo "    - https://www.kunstderfuge.com (browse by composer)"
