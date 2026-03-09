@@ -762,6 +762,170 @@ def encode_haydn_serenade():
 
 
 # ═══════════════════════════════════════════════════
+# 10. Brahms - Wiegenlied Op.49 No.4  (3/4, Eb major)
+#     "Guten Abend, gut' Nacht" — THE lullaby
+# ═══════════════════════════════════════════════════
+def encode_brahms_wiegenlied():
+    rh = []
+    lh = []
+
+    # 3/4 time, Eb major. The most famous lullaby ever written.
+    # Melody starts on beat 3 (pickup of two eighths)
+
+    # Waltz-like LH: bass on beat 1, chord on beats 2-3
+    def waltz(bass, c1, c2):
+        return [n(bass, Q, PP), n(c1, Q, PP), n(c2, Q, PP)]
+
+    # Pickup: "Gu-ten"
+    rh += [n('Bb3', E, P), n('Bb3', E, P)]
+    lh += [rest(Q)]
+
+    # Bar 1: "A-bend, gut'"
+    rh += [n('Eb4', DQ, MP), n('Bb3', E, P), n('Eb4', E, MP), n('G4', E, MP)]
+    lh += waltz('Eb3', 'G3', 'Bb3')
+
+    # Bar 2: "Nacht,"  (Q downbeat + DQ rest + E pickup)
+    rh += [n('F4', Q, MP), rest(DQ), n('Bb3', E, P)]
+    lh += waltz('Bb2', 'F3', 'Ab3')
+
+    # Bar 3: "mit Ro-sen be-"
+    rh += [n('F4', DQ, MP), n('Bb3', E, P), n('F4', E, MP), n('Ab4', E, MF)]
+    lh += waltz('Bb2', 'F3', 'Ab3')
+
+    # Bar 4: "dacht,"  (Q downbeat + DQ rest + E pickup)
+    rh += [n('G4', Q, MP), rest(DQ), n('Eb4', E, MP)]
+    lh += waltz('Eb3', 'G3', 'Bb3')
+
+    # Bar 5: "mit Näg-lein be-"
+    rh += [n('F4', Q, MP), n('Eb4', E, P), n('F4', E, MP), n('Eb4', E, P), n('C4', E, P)]
+    lh += waltz('Ab2', 'Eb3', 'Ab3')
+
+    # Bar 6: "steckt, schlupf"
+    rh += [n('Bb3', DQ, P), rest(E), n('Bb3', E, P), n('Bb3', E, P)]
+    lh += waltz('Eb3', 'G3', 'Bb3')
+
+    # Bar 7: "un-ter die"
+    rh += [n('Eb4', DQ, MP), n('Bb3', E, P), n('Eb4', E, MP), n('G4', E, MP)]
+    lh += waltz('Eb3', 'G3', 'Bb3')
+
+    # Bar 8: "Deck',"  (Q downbeat + DQ rest + E pickup)
+    rh += [n('F4', Q, MP), rest(DQ), n('Bb3', E, P)]
+    lh += waltz('Bb2', 'F3', 'Ab3')
+
+    # Bar 9: "mor-gen früh"
+    rh += [n('F4', DQ, MP), n('Bb3', E, P), n('F4', E, MP), n('Ab4', E, MF)]
+    lh += waltz('Bb2', 'F3', 'Ab3')
+
+    # Bar 10: "wenn Gott"  (Q downbeat + DQ rest + E pickup)
+    rh += [n('G4', Q, MF), rest(DQ), n('G4', E, MF)]
+    lh += waltz('Eb3', 'G3', 'Bb3')
+
+    # Bar 11: "will, wirst du"
+    rh += [n('Ab4', Q, MF), n('Ab4', E, MF), n('Ab4', E, MP), n('G4', E, MP), n('F4', E, P)]
+    lh += waltz('Ab2', 'Eb3', 'Ab3')
+
+    # Bar 12: "wie-der ge-"
+    rh += [n('G4', Q, MP), n('G4', E, MP), n('G4', E, MP), n('F4', E, P), n('Eb4', E, P)]
+    lh += waltz('Bb2', 'D3', 'F3')
+
+    # Bar 13: "weckt." (held, then rest)
+    rh += [n('F4', H, MP), n('Eb4', Q, P)]
+    lh += waltz('Eb3', 'G3', 'Bb3')
+
+    # Bar 14: final rest
+    rh += [n('Eb4', DH, P)]
+    lh += [n('Eb3', DH, PP)]
+
+    save_piece('lullabies/brahms/brahms_wiegenlied_op49no4.mid',
+               'Brahms - Wiegenlied Op.49 No.4', 66, 3, 4, 'Eb', rh, lh)
+
+
+# ═══════════════════════════════════════════════════
+# 11. Handel - Largo from Xerxes "Ombra mai fu"
+#     (3/4, F major) — calm, stately, soothing
+# ═══════════════════════════════════════════════════
+def encode_handel_largo():
+    rh = []
+    lh = []
+
+    # "Ombra mai fu" — a serene aria praising the shade of a plane tree.
+    # 3/4, F major, larghetto. Simple, noble melody with sustained bass.
+
+    def bass_chord(b, t):
+        """Sustained bass + gentle chord."""
+        return [n(b, H, PP), n(t, Q, PP)]
+
+    # Instrumental intro (simplified)
+    rh += [n('F4', DH, P)]
+    lh += bass_chord('F3', 'A3')
+
+    rh += [n('A4', H, P), n('G4', Q, P)]
+    lh += bass_chord('F3', 'C4')
+
+    rh += [n('F4', DH, P)]
+    lh += bass_chord('F3', 'A3')
+
+    # "Ombra mai fu"
+    rh += [n('C5', DH, MP)]
+    lh += bass_chord('F3', 'A3')
+
+    rh += [n('C5', Q, MP), n('D5', Q, MP), n('C5', Q, MP)]
+    lh += bass_chord('Bb2', 'D3')
+
+    rh += [n('A4', H, MP), n('G4', Q, P)]
+    lh += bass_chord('C3', 'E3')
+
+    rh += [n('F4', DH, P)]
+    lh += bass_chord('F3', 'A3')
+
+    # "di ve-ge-ta-bi-le"
+    rh += [n('A4', Q, MP), n('G4', Q, MP), n('A4', Q, MP)]
+    lh += bass_chord('F3', 'C4')
+
+    rh += [n('Bb4', H, MF), n('A4', Q, MP)]
+    lh += bass_chord('Bb2', 'D3')
+
+    rh += [n('G4', DQ, MP), n('A4', E, P), n('G4', Q, P)]
+    lh += bass_chord('C3', 'E3')
+
+    rh += [n('F4', DH, P)]
+    lh += bass_chord('F3', 'A3')
+
+    # "ca-ra ed a-ma-bi-le"
+    rh += [n('A4', Q, MP), n('Bb4', Q, MF), n('C5', Q, MF)]
+    lh += bass_chord('F3', 'A3')
+
+    rh += [n('D5', H, MF), n('C5', Q, MP)]
+    lh += bass_chord('Bb2', 'F3')
+
+    rh += [n('Bb4', Q, MP), n('A4', Q, MP), n('G4', Q, P)]
+    lh += bass_chord('C3', 'E3')
+
+    # "soave più"
+    rh += [n('A4', H, MP), n('G4', Q, P)]
+    lh += bass_chord('F3', 'C4')
+
+    rh += [n('F4', DH, P)]
+    lh += bass_chord('F3', 'A3')
+
+    # Return: "Ombra mai fu"
+    rh += [n('C5', DH, MP)]
+    lh += bass_chord('F3', 'A3')
+
+    rh += [n('C5', Q, MP), n('D5', Q, MF), n('C5', Q, MP)]
+    lh += bass_chord('Bb2', 'D3')
+
+    rh += [n('A4', H, MP), n('G4', Q, P)]
+    lh += bass_chord('C3', 'E3')
+
+    rh += [n('F4', DH, PP)]
+    lh += [n('F3', DH, PP)]
+
+    save_piece('lullabies/handel/handel_largo_xerxes_ombra_mai_fu.mid',
+               'Handel - Largo from Xerxes (Ombra mai fu)', 56, 3, 4, 'F', rh, lh)
+
+
+# ═══════════════════════════════════════════════════
 #  MAIN
 # ═══════════════════════════════════════════════════
 if __name__ == '__main__':
@@ -777,6 +941,8 @@ if __name__ == '__main__':
     encode_chopin_berceuse()
     encode_bach_bist_du_bei_mir()
     encode_haydn_serenade()
+    encode_brahms_wiegenlied()
+    encode_handel_largo()
 
     print()
-    print("Done! 9 pieces encoded.")
+    print("Done! 11 pieces encoded.")
