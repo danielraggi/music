@@ -43,12 +43,10 @@ download_midi() {
             echo "         Not a valid MIDI file, removing"
             rm -f "$dest"
             echo "$desc -> $url" >> "$MANUAL_FILE"
-            return 1
         fi
     else
         echo "         Download failed"
         echo "$desc -> $url" >> "$MANUAL_FILE"
-        return 1
     fi
 }
 
